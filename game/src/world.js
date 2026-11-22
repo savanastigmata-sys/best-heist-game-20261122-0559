@@ -1,6 +1,6 @@
 // The heist world: the thief, the alarm, the loot, the tools and the floors.
 // One fixed step advances everything; it returns a bitmask of what happened.
-import { ALARM, CAMERA, FLOORS, GUARD, LOOT, ROOM, THIEF } from './config.js';
+import { ALARM, CAMERA, DIFFICULTY, FLOORS, GUARD, LOOT, ROOM, THIEF } from './config.js';
 import { buildVaultFloor, rebuildVaultFloor } from './levels.js';
 import { guardSeesThief, updateGuardPatrol } from './guards.js';
 import { cameraSeesThief, sweepCameraCone } from './cameras.js';
@@ -27,12 +27,13 @@ function hitsCover(x, y, r, rects) {
 }
 
 /** The whole heist: state, rules and one fixed step. */
-export function createHeistWorld(random) {
+export function createHeistWorld(random, difficulty = DIFFICULTY.NORMAL) {
   const planCache = {};
   let prevMaxSuspicion = 0;
 
   const state = {
     floor: 1,
+    difficulty,
     score: 0,
     alarm: 0,
     time: 0,
@@ -63,9 +64,9 @@ export function createHeistWorld(random) {
   function loadFloor(floor) {
     let plan;
     if (planCache[floor]) {
-      plan = rebuildVaultFloor(floor, planCache[floor]);
+      plan = rebuildVaultFloor(floor, planCache[floor], state.difficulty);
     } else {
-      plan = buildVaultFloor(floor, random);
+      plan = buildVaultFloor(floor, random, state.difficulty);
       planCache[floor] = plan.floorData;
     }
     state.floor = floor;
@@ -195,8 +196,8 @@ export function createHeistWorld(random) {
     for (let i = 0; i < state.cameras.length; i += 1) {
       if (cameraSeesThief(state.cameras[i], thief, state.coverRects, smokeHidden)) cameraSeen = true;
     }
-    if (anyChasing) state.alarm += ALARM.chaseRise * dt;
-    if (cameraSeen) state.alarm += CAMERA.alarmRise * dt;
+    if (anyChasing) state.alarm += ALARM.chaseRise * state.difficulty.alarm * dt;
+    if (cameraSeen) state.alarm += CAMERA.alarmRise * state.difficulty.alarm * dt;
     if (!guardSeen && !cameraSeen && !anyChasing) state.alarm -= ALARM.decay * dt;
     state.alarm = Math.max(0, Math.min(ALARM.max, state.alarm));
 
@@ -262,5 +263,11 @@ export function createHeistWorld(random) {
 
   loadFloor(1);
 
-  return { state, reset, loadFloor, step, useSmoke, useJammer, payFee };
+  /** Switch difficulty (the title screen's arrow keys) and re-deal the floor under the new pressure. */
+  function setDifficulty(next) {
+    state.difficulty = next;
+    loadFloor(state.floor);
+  }
+
+  return { state, reset, loadFloor, step, useSmoke, useJammer, payFee, setDifficulty };
 }

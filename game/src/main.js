@@ -6,7 +6,7 @@
 // ?seed=N fixes the loot jitter. ?shot=start|play|caught|win (with &seed=N)
 // stages that scene instead of running the loop, paints it twice and sets
 // window.__shotReady for a screenshot.
-import { BEST_KEY, STEP } from './config.js';
+import { BEST_KEY, DIFFICULTY, DIFFICULTY_ORDER, STEP } from './config.js';
 import { createRandom } from './random.js';
 import {
   createHeistWorld,
@@ -35,7 +35,7 @@ import {
   SCREEN_TITLE,
   SCREEN_WIN,
 } from './render.js';
-import { stageShot } from './shots.js';
+import { SHOT_NAMES, stageShot } from './shots.js';
 
 const GAME_TITLE = 'GILDED HOUR';
 
@@ -93,6 +93,8 @@ function runGame() {
   let walkTarget = null;
   let accumulator = 0;
   let last = performance.now();
+  let difficultyIndex = 1;
+  let prevDirX = 0;
 
   window.__heist = { world, get screen() { return screen; } };
 
@@ -162,6 +164,16 @@ function runGame() {
 
   function step() {
     if (screen === SCREEN_TITLE) {
+      // Arrow keys pick the difficulty (edge-triggered: holding the key does not cycle).
+      const dir = input.direction();
+      let next = difficultyIndex;
+      if (dir.x > 0 && prevDirX <= 0) next = Math.min(DIFFICULTY_ORDER.length - 1, difficultyIndex + 1);
+      else if (dir.x < 0 && prevDirX >= 0) next = Math.max(0, difficultyIndex - 1);
+      prevDirX = dir.x;
+      if (next !== difficultyIndex) {
+        difficultyIndex = next;
+        world.setDifficulty(DIFFICULTY[DIFFICULTY_ORDER[difficultyIndex]]);
+      }
       world.step(STEP, { x: 0, y: 0 }, false, true);
       return;
     }
@@ -225,5 +237,5 @@ function runGame() {
   requestAnimationFrame(frame);
 }
 
-if (shot) runShot(shot);
+if (shot) runShot(SHOT_NAMES.includes(shot) ? shot : 'start');
 else runGame();

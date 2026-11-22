@@ -1,4 +1,4 @@
-// The screenshot scenes behind ?shot=start|play|caught|win. Each one plays
+// The screenshot scenes behind ?shot=start|play|smoke|win. Each one plays
 // the real rules forward from a fresh world, steered by a simple autopilot
 // that samples eight directions, scores them by progress toward its goal
 // minus the danger of the cones, and sneaks while it is unseen — so the
@@ -10,6 +10,9 @@ import { SCREEN_OVER, SCREEN_PLAY, SCREEN_TITLE, SCREEN_WIN } from './render.js'
 import { guardSeesThief } from './guards.js';
 import { cameraSeesThief } from './cameras.js';
 import { shadowLanePath } from './routes.js';
+
+/** The four staged scenes, in screenshot order: title, cover, smoke, win. */
+export const SHOT_NAMES = ['start', 'play', 'smoke', 'win'];
 
 const START_SECONDS = 5;
 const PLAY_SECONDS = 18;
@@ -123,13 +126,16 @@ function runLeg(world, goal, useToolsFlag) {
 }
 
 /**
- * Set `world` to the named scene (start, play, caught or win; any other
+ * Set `world` to the named scene (start, play, smoke or win; any other
  * name is start) and return the screen to draw over it and the best score.
  */
 export function stageShot(name, world) {
   world.reset();
   const state = world.state;
-  if (name !== 'play' && name !== 'caught' && name !== 'win') {
+  if (name !== 'play' && name !== 'smoke' && name !== 'win') {
+    // The title stands over floor 2's room: one more guard, one more
+    // camera behind the panel than floor 1 shows.
+    world.loadFloor(2);
     for (let i = 0; i < START_SECONDS / STEP; i += 1) {
       world.step(STEP, { x: 0, y: 0 }, false, true);
     }
@@ -159,16 +165,28 @@ export function stageShot(name, world) {
     }
     return { screen: SCREEN_PLAY, best: state.score };
   }
-  if (name === 'caught') {
+  if (name === 'smoke') {
+    // Floor 2: steal the diamond first (the guards get 25% faster), then
+    // run for the exit without sneaking until a guard chases or the alarm
+    // runs hot, throw smoke, and slip away down the shadow lane while the
+    // cloud holds — the frame shows the tool, the chase and the alarm.
+    world.loadFloor(2);
     const diamond = { x: state.diamond.x, y: state.diamond.y };
     for (let i = 0; i < 12000; i += 1) {
-      if (state.diamondTaken || state.caught) break;
-      world.step(STEP, straightAt(state, diamond), false, false);
+      if (state.caught || state.diamondTaken) break;
+      const sneak = maxSuspicion(state) < 25 && state.alarm < 50;
+      world.step(STEP, autopilot(state, diamond), sneak, false);
     }
+    const exit = { x: state.exitCentre.x, y: state.exitCentre.y };
     for (let i = 0; i < 12000; i += 1) {
+      if (state.caught || state.won) break;
+      if (anyChasing(state) || state.alarm > 30) break;
+      world.step(STEP, autopilot(state, exit), false, false);
+    }
+    if (!state.caught) world.useSmoke();
+    for (let i = 0; i < 45; i += 1) {
       if (state.caught) break;
-      const guard = state.guards[2];
-      world.step(STEP, straightAt(state, { x: guard.x, y: guard.y }), false, false);
+      world.step(STEP, autopilot(state, exit), false, false);
     }
     return { screen: state.caught ? SCREEN_OVER : SCREEN_PLAY, best: state.score };
   }

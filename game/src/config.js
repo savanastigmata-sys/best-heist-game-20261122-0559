@@ -81,6 +81,24 @@ export const LOOT = {
 /** The same bonus, by its own name, for the floor-clear panel. */
 export const FLOOR_BONUS = 5000;
 
+/** Three difficulties: the same vault, different pressure. NORMAL is the shipped tuning, unchanged. */
+export const DIFFICULTY = {
+  QUIET: { name: 'QUIET', guardSpeed: 0.8, suspicion: 0.7, alarm: 0.7, cameraSweep: 1.25 },
+  NORMAL: { name: 'NORMAL', guardSpeed: 1, suspicion: 1, alarm: 1, cameraSweep: 1 },
+  DARING: { name: 'DARING', guardSpeed: 1.2, suspicion: 1.3, alarm: 1.3, cameraSweep: 0.8 },
+};
+
+/** The difficulty order the title screen cycles through with the arrow keys. */
+export const DIFFICULTY_ORDER = ['QUIET', 'NORMAL', 'DARING'];
+
+/** The alarm's named level, shown in the HUD bar: CALM, SUSPICIOUS, HOT, LOCKDOWN. */
+export function alarmLevel(alarm) {
+  if (alarm >= 75) return 'LOCKDOWN';
+  if (alarm >= 50) return 'HOT';
+  if (alarm >= 25) return 'SUSPICIOUS';
+  return 'CALM';
+}
+
 export const PALETTE = {
   backdrop: '#0b0d12',
   wall: '#23202e',

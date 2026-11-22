@@ -1,18 +1,19 @@
 // Security cameras: wall-mounted, sweeping their cones on a fixed period.
 // The sweep phase comes from the camera's position, never from Math.random,
 // so the same seed replays the same sweeps.
-import { CAMERA } from './config.js';
+import { CAMERA, DIFFICULTY } from './config.js';
 import { angleDifference, lineOfSightBlocked } from './guards.js';
 
 /**
  * A camera on the wall. Its sweep phase is derived from where it hangs, so
  * two cameras never sweep in lockstep and the pattern repeats every run.
+ * The difficulty stretches or shrinks the sweep period; NORMAL is unchanged.
  */
-export function createSecurityCamera(config, floor) {
+export function createSecurityCamera(config, floor, difficulty = DIFFICULTY.NORMAL) {
   const phase = (((config.x * 31 + config.y * 17) % 360) * Math.PI) / 180;
   const period = Math.max(
     CAMERA.minPeriod,
-    CAMERA.sweepPeriod - CAMERA.sweepPerFloor * (floor - 1),
+    (CAMERA.sweepPeriod - CAMERA.sweepPerFloor * (floor - 1)) * difficulty.cameraSweep,
   );
   return {
     x: config.x,

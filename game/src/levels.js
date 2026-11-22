@@ -1,6 +1,7 @@
 // The vault floors: one room per floor, three routes through it, guards on
 // patrol loops and cameras on the walls. Side loot is jittered a little with
 // the seeded RNG, so the same seed replays the same room.
+import { DIFFICULTY } from './config.js';
 import { ROUTES } from './routes.js';
 import { createGuardPatrol } from './guards.js';
 import { createSecurityCamera } from './cameras.js';
@@ -9,7 +10,7 @@ import { createSecurityCamera } from './cameras.js';
  * Build one vault floor. The first thing it does is jitter the side loot
  * (portrait, gold, necklace, in that order) so the seeded run is fixed.
  */
-export function buildVaultFloor(floor, random) {
+export function buildVaultFloor(floor, random, difficulty = DIFFICULTY.NORMAL) {
   const portraitX = 1124 + (random() * 24 - 12);
   const goldX = 168 + (random() * 24 - 12);
   const necklaceX = 340 + (random() * 24 - 12);
@@ -23,7 +24,7 @@ export function buildVaultFloor(floor, random) {
     guardConfigs: guardConfigsFor(floor),
     cameraConfigs: cameraConfigsFor(floor),
   };
-  return rebuildVaultFloor(floor, data);
+  return rebuildVaultFloor(floor, data, difficulty);
 }
 
 /** A cover rectangle: display cases and pillars both block sight and feet. */
@@ -63,8 +64,10 @@ function cameraConfigsFor(floor) {
 /**
  * Rebuild a floor from cached data — same room, fresh guards and cameras,
  * no RNG spent. The world uses it so a restart replays the same floor.
+ * Each guard is named (GUARD A, B, C, D) so the renderer can show a warden
+ * with a status, and the difficulty reaches the patrols and cameras.
  */
-export function rebuildVaultFloor(floor, data) {
+export function rebuildVaultFloor(floor, data, difficulty = DIFFICULTY.NORMAL) {
   const cases = [
     cover(268, 210, 132, 74),
     cover(880, 210, 132, 74),
@@ -86,8 +89,12 @@ export function rebuildVaultFloor(floor, data) {
     cases,
     pillars,
     coverRects: [...cases, ...pillarRects],
-    guards: data.guardConfigs.map((config) => createGuardPatrol(config, floor)),
-    cameras: data.cameraConfigs.map((config) => createSecurityCamera(config, floor)),
+    guards: data.guardConfigs.map((config, i) => {
+      const guard = createGuardPatrol(config, floor, difficulty);
+      guard.name = `GUARD ${'ABCD'[i]}`;
+      return guard;
+    }),
+    cameras: data.cameraConfigs.map((config) => createSecurityCamera(config, floor, difficulty)),
     routes: ROUTES,
     floorData: data,
   };

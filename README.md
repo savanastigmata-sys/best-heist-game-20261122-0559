@@ -4,7 +4,7 @@
 [![rank](https://make.fun/badge/best-heist-game-20261122-0559/savanastigmata-sys/best-heist-game-20261122-0559/rank.svg)](https://make.fun/bounty/best-heist-game-20261122-0559/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=best-heist-game-20261122-0559)
 [![reward](https://make.fun/badge/best-heist-game-20261122-0559/savanastigmata-sys/best-heist-game-20261122-0559/reward.svg)](https://make.fun/bounty/best-heist-game-20261122-0559?utm_source=github&utm_medium=readme&utm_campaign=best-heist-game-20261122-0559)
 
-Gilded Hour — The Meridian Vault Heist. A top-down stealth game in three floors. You are the thief crossing the Meridian Vault: steal the Aurora Diamond ($50,000) from its pedestal, grab the gold bars, the portrait and the necklace on the way, and reach the green GETAWAY door before the alarm hits 100%. Three routes per floor — the bold velvet carpet, the covered display cases, the quiet shadow lane — guards with vision cones you have to read before you move, wall cameras sweeping their cones, smoke bombs and a camera jammer at $2,000 a use, and a getaway that pays off the planning with a clean-getaway bonus and a star rating.
+Gilded Hour — The Meridian Vault Heist. A top-down stealth game in three floors. You are the thief crossing the Meridian Vault: steal the Aurora Diamond ($50,000) from its pedestal, grab the gold bars ($5,000), the portrait ($8,000) and the necklace ($3,000) on the way, and reach the green GETAWAY door before the alarm hits 100%. Three routes per floor — the bold velvet carpet, the covered display cases, the quiet shadow lane. Guards patrol waypoint loops with 65° vision cones: suspicion rises while you are seen, and at 100% they chase the last place they saw you. Wall cameras sweep their cones and push the alarm up 24/s. The alarm climbs when you are spotted, chased or filmed, and falls while you stay hidden; at 100% the vault locks down. Tools cost $2,000 a use: [1] smoke bombs that blind every guard, [2] a camera jammer that kills every camera for 8 s. Three difficulties — QUIET, NORMAL, DARING — set how fast the patrols are and how fast suspicion and the alarm climb. Each floor cleared banks a $5,000 clean-getaway bonus; finish all three floors for a 1–3 star rating on alarm, loot, time and tools used.
 
 ## Run it
 
@@ -12,7 +12,7 @@ Gilded Hour — The Meridian Vault Heist. A top-down stealth game in three floor
 node serve.ts
 ```
 
-Then open http://localhost:8080 in a desktop browser. WASD or arrows to move, Shift to sneak, 1 for a smoke bomb, 2 for the camera jammer, click to walk somewhere, P to pause, M to mute. No network, no build step, no libraries — just the files under game/.
+Then open http://localhost:8080 in a desktop browser. WASD or arrows to move, Shift to sneak, 1 for a smoke bomb, 2 for the camera jammer, click to walk somewhere, P to pause, M to mute. On the title screen, Left/Right arrows pick the difficulty (QUIET / NORMAL / DARING). No network, no build step, no libraries — just the files under game/.
 
 ---
 

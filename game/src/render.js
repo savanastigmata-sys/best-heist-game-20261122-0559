@@ -2,7 +2,7 @@
 // needs to see is in the frame — the room, the cones, the cameras, the loot
 // and the alarm meter — with every label on a dark chip so it survives
 // shrinking to the contact sheet.
-import { CAMERA, FIELD, FLOOR_BONUS, FONT, GUARD, HUD_HEIGHT, PALETTE, ROOM } from './config.js';
+import { alarmLevel, CAMERA, DIFFICULTY_ORDER, FIELD, FLOOR_BONUS, FONT, GUARD, HUD_HEIGHT, PALETTE, ROOM } from './config.js';
 import { computeVisionCone } from './guards.js';
 
 export const SCREEN_TITLE = 'title';
@@ -11,10 +11,6 @@ export const SCREEN_PAUSED = 'paused';
 export const SCREEN_OVER = 'over';
 export const SCREEN_WIN = 'win';
 export const SCREEN_FLOOR = 'floor';
-
-function money(value) {
-  return `$${value.toLocaleString('en-US')}`;
-}
 
 /** Paint the thief's vault room, HUD and the current screen's panel. */
 export function createRenderer(canvas) {
@@ -248,7 +244,10 @@ export function createRenderer(canvas) {
         ctx.fillStyle = '#f08c28';
         ctx.fillText('?', guard.x, guard.y - 38);
       }
-      chipText('GUARD', guard.x, guard.y + 28, 11, PALETTE.muted);
+      const guardStatus = guard.chasing ? 'CHASING'
+        : guard.suspicion > GUARD.spotAtSuspicion ? 'SUSPICIOUS'
+        : guard.suspicion > 5 ? 'WATCHING' : 'PATROL';
+      chipText(`${guard.name || 'GUARD'} · ${guardStatus}`, guard.x, guard.y + 28, 11, PALETTE.muted);
     }
     const thief = state.thief;
     ctx.beginPath();
@@ -303,10 +302,10 @@ export function createRenderer(canvas) {
     ctx.fillText('GILDED HOUR', 36, 24);
     ctx.font = `bold 13px ${FONT}`;
     ctx.fillStyle = PALETTE.text;
-    ctx.fillText(`FLOOR ${state.floor}/3`, 36, 48);
+    ctx.fillText(`FLOOR ${state.floor}/3 · ${state.difficulty.name}`, 36, 48);
     for (let i = 0; i < 3; i += 1) {
       ctx.beginPath();
-      ctx.arc(150 + i * 20, 48, 5, 0, Math.PI * 2);
+      ctx.arc(200 + i * 20, 48, 5, 0, Math.PI * 2);
       ctx.fillStyle = i < state.floor ? PALETTE.gold : '#444444';
       ctx.fill();
     }
@@ -326,7 +325,7 @@ export function createRenderer(canvas) {
     ctx.strokeStyle = PALETTE.wallTrim;
     ctx.lineWidth = 1;
     ctx.strokeRect(barX, barY, barW, barH);
-    const pct = `${Math.round(state.alarm)}%`;
+    const pct = `${Math.round(state.alarm)}% · ${alarmLevel(state.alarm)}`;
     ctx.font = `bold 13px ${FONT}`;
     const pctWidth = ctx.measureText(pct).width;
     ctx.fillStyle = 'rgba(8,6,12,0.72)';
@@ -348,7 +347,7 @@ export function createRenderer(canvas) {
     ctx.textAlign = 'center';
     ctx.fillStyle = PALETTE.muted;
     ctx.fillText(
-      'WASD / Arrows move · Shift sneak · [1] Smoke $2,000 · [2] Jammer $2,000 · Click to walk · P pause · M mute',
+      'OBJECTIVE: STEAL THE DIAMOND → GETAWAY · WASD move · Shift sneak · Click to walk · [1] Smoke · [2] Jammer · P pause',
       640, 708,
     );
   }
@@ -401,12 +400,15 @@ export function createRenderer(canvas) {
     ctx.fillRect(ROOM.x, ROOM.y, ROOM.width, ROOM.height);
     drawHud(state, best);
     if (screen === SCREEN_TITLE) {
+      const diffLine = `DIFFICULTY ← → : ${DIFFICULTY_ORDER.map((name) => (name === state.difficulty.name ? `${name} ★` : name)).join(' · ')}`;
       drawPanel('GILDED HOUR', [
-        'The Meridian Vault Heist',
-        'Steal the Aurora Diamond — $50,000 — then reach the getaway door.',
-        'Read the cones. Reach the getaway before the alarm hits 100%.',
-        'Three routes: velvet carpet, display cases, shadow lane.',
-        'Tools cost $2,000 a use: [1] smoke blinds guards, [2] jammer kills cameras.',
+        'The Meridian Vault Heist — 3 floors, one diamond, one getaway.',
+        'LOOT $66,000 a floor: Diamond $50,000 · Portrait $8,000 · Gold $5,000 · Necklace $3,000.',
+        '3 ROUTES: velvet carpet (bold) · display cases (cover) · shadow lane (quiet).',
+        'PATROLS + VISION CONES + SWEEPING CAMERAS — read them before you move.',
+        'TOOLS $2,000 a use: [1] smoke blinds guards · [2] jammer kills cameras.',
+        'ALARM 0–100%: seen by a guard or camera, it climbs. At 100% — lockdown.',
+        diffLine,
         'WASD move · Shift sneak · Click to walk · Space start',
       ], 'Press Space to start the heist', t);
     } else if (screen === SCREEN_PAUSED) {
@@ -419,18 +421,30 @@ export function createRenderer(canvas) {
     } else if (screen === SCREEN_OVER) {
       drawPanel('CAUGHT!', [
         state.caughtCause,
-        `Floor ${state.floor} · Loot ${money(state.score)} · Best ${money(best)}`,
+        `Floor ${state.floor} · Loot ${money(state.score)} · Time ${mmss(state.time)} · Alarm ${Math.round(state.alarm)}%`,
+        `Tools used ${state.toolsUsed} · Fence fees ${money(state.feesPaid)} · Best ${money(best)}`,
+        `Diamond ${state.diamondTaken ? 'STOLEN — the getaway was open' : 'STILL IN THE VAULT'}`,
       ], 'Press Space to try again', t);
     } else if (screen === SCREEN_WIN) {
       const stars = state.alarm < 30 ? '★★★' : state.alarm < 60 ? '★★' : '★';
       drawPanel('GETAWAY!', [
         `${stars}  The Aurora Diamond is yours.`,
         `Final loot ${money(state.score)} · Fence fees ${money(state.feesPaid)}`,
-        `${state.floor} floors · ${state.lootCount} loot · ${state.toolsUsed} tools used · Alarm ${Math.round(state.alarm)}%`,
+        `${state.floor} floors · ${state.lootCount} loot · ${state.toolsUsed} tools used · Alarm ${Math.round(state.alarm)}% · Time ${mmss(state.time)}`,
         `Best ${money(best)}`,
       ], 'Press Space to play again', t);
     }
   }
 
   return { draw };
+}
+
+function money(value) {
+  return `$${value.toLocaleString('en-US')}`;
+}
+
+/** Seconds as M:SS for the end panels. */
+function mmss(seconds) {
+  const total = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }

@@ -1,6 +1,6 @@
 // Guards: patrol loops, vision cones, suspicion, and the fair chase — a
 // guard chases the last place it saw the thief, never the thief itself.
-import { GUARD } from './config.js';
+import { DIFFICULTY, GUARD } from './config.js';
 
 /** True when the segment from (x1,y1) to (x2,y2) crosses any cover rectangle. */
 export function lineOfSightBlocked(x1, y1, x2, y2, rects) {
@@ -48,8 +48,10 @@ export function angleDifference(a, b) {
 /**
  * A guard on a patrol loop. It starts at the first waypoint facing down,
  * walks to the next waypoint, pauses there and looks around, then moves on.
+ * The difficulty scales its patrol and chase speed and how fast it grows
+ * suspicious; NORMAL leaves every number exactly as shipped.
  */
-export function createGuardPatrol(config, floor) {
+export function createGuardPatrol(config, floor, difficulty = DIFFICULTY.NORMAL) {
   const waypoints = config.waypoints.map((p) => ({ x: p[0], y: p[1] }));
   return {
     x: waypoints[0].x,
@@ -59,8 +61,10 @@ export function createGuardPatrol(config, floor) {
     waypointIndex: waypoints.length > 1 ? 1 : 0,
     pauseSeconds: config.pauseSeconds,
     pauseTimer: 0,
-    patrolSpeed: GUARD.patrolSpeed + GUARD.patrolPerFloor * (floor - 1),
-    chaseSpeed: GUARD.chaseSpeed,
+    patrolSpeed: (GUARD.patrolSpeed + GUARD.patrolPerFloor * (floor - 1)) * difficulty.guardSpeed,
+    chaseSpeed: GUARD.chaseSpeed * difficulty.guardSpeed,
+    suspicionRise: GUARD.suspicionRise * difficulty.suspicion,
+    suspicionRiseSneak: GUARD.suspicionRiseSneak * difficulty.suspicion,
     speedMultiplier: 1,
     suspicion: 0,
     chasing: false,
@@ -122,7 +126,7 @@ export function updateGuardPatrol(guard, dt, thief, coverRects, sneaking, smokeH
     guard.lastSeenX = thief.x;
     guard.lastSeenY = thief.y;
     guard.unseenSeconds = 0;
-    const rise = sneaking ? GUARD.suspicionRiseSneak : GUARD.suspicionRise;
+    const rise = sneaking ? guard.suspicionRiseSneak : guard.suspicionRise;
     guard.suspicion = Math.min(GUARD.chaseAtSuspicion, guard.suspicion + rise * dt);
   } else {
     guard.unseenSeconds += dt;
